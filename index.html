@@ -3,196 +3,245 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Stickman Fighter - Step 2</title>
+    <title>Stickman Fighter - Step 4 (Animated Art)</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #333;
-            touch-action: none;
-            font-family: Arial, sans-serif;
-        }
-        canvas {
-            display: block;
-            background-color: #87CEEB;
-            margin: 0 auto;
-        }
+        body { margin: 0; overflow: hidden; background-color: #2c3e50; touch-action: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { display: block; background-color: #ecf0f1; margin: 0 auto; }
         
-        /* হেলথ বারের ডিজাইন */
-        #ui-container {
-            position: absolute;
-            top: 0;
-            width: 100%;
-            padding: 20px;
-            box-sizing: border-box;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .health-box {
-            width: 40%;
-            height: 30px;
-            background-color: red; /* ড্যামেজ খেলে লাল দেখাবে */
-            border: 3px solid white;
-            border-radius: 5px;
-        }
-        #playerHealth, #enemyHealth {
-            height: 100%;
-            background-color: #2ecc71; /* সবুজের মানে হেলথ আছে */
-            transition: width 0.2s ease;
-        }
-        #enemyHealth {
-            float: right; /* শত্রুর হেলথ ডানদিক থেকে কমবে */
-        }
+        /* UI ডিজাইন */
+        #ui-container { position: absolute; top: 0; width: 100%; padding: 20px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        .health-box { width: 35%; height: 25px; background-color: #e74c3c; border: 3px solid #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        #playerHealth, #enemyHealth { height: 100%; background-color: #2ecc71; transition: width 0.2s ease, background-color 0.3s ease; }
+        #enemyHealth { float: right; }
+        
+        #timer { background-color: rgba(0,0,0,0.8); color: #fff; padding: 10px 25px; font-size: 28px; font-weight: bold; border: 3px solid #fff; border-radius: 15px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
 
-        /* মোবাইল কন্ট্রোল বাটনের ডিজাইন */
-        #mobile-controls {
-            position: absolute;
-            bottom: 20px;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 20px;
-            box-sizing: border-box;
-        }
-        .control-group {
-            display: flex;
-            gap: 15px;
-        }
-        .btn {
-            width: 60px;
-            height: 60px;
-            background-color: rgba(255, 255, 255, 0.4);
-            border: 2px solid rgba(255, 255, 255, 0.7);
-            border-radius: 50%;
-            color: #000;
-            font-weight: bold;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            user-select: none;
-            cursor: pointer;
-            touch-action: manipulation;
-        }
-        .btn:active {
-            background-color: rgba(255, 255, 255, 0.8);
-        }
+        /* স্কোর বোর্ড */
+        #score-board { position: absolute; top: 80px; width: 100%; display: flex; justify-content: space-between; padding: 0 25px; box-sizing: border-box; color: #fff; font-weight: bold; font-size: 18px; text-shadow: 2px 2px 4px #000; z-index: 10; }
+
+        /* গেম ওভার স্ক্রিন */
+        #gameOverScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 100; }
+        #winnerText { font-size: 50px; font-weight: bold; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 2px; }
+        #finalScore { font-size: 24px; margin-bottom: 30px; color: #f1c40f; }
+        #restartBtn { padding: 15px 40px; font-size: 22px; font-weight: bold; cursor: pointer; background-color: #2ecc71; color: white; border: none; border-radius: 30px; box-shadow: 0 5px 0 #27ae60; transition: all 0.1s; text-transform: uppercase; }
+        #restartBtn:active { box-shadow: 0 2px 0 #27ae60; transform: translateY(3px); }
+
+        /* মোবাইল বাটন */
+        #mobile-controls { position: absolute; bottom: 25px; width: 100%; display: flex; justify-content: space-between; padding: 0 25px; box-sizing: border-box; z-index: 10; }
+        .control-group { display: flex; gap: 18px; }
+        .btn { width: 65px; height: 65px; background-color: rgba(255, 255, 255, 0.2); border: 3px solid rgba(255, 255, 255, 0.6); border-radius: 50%; color: #fff; font-weight: bold; font-size: 13px; text-transform: uppercase; display: flex; align-items: center; justify-content: center; user-select: none; cursor: pointer; touch-action: manipulation; box-shadow: 0 4px 0 rgba(0,0,0,0.2); }
+        .btn:active { background-color: rgba(255, 255, 255, 0.5); transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+        #atkBtn { background-color: rgba(231, 76, 60, 0.3); border-color: rgba(231, 76, 60, 0.8); }
+        #atkBtn:active { background-color: rgba(231, 76, 60, 0.7); }
     </style>
 </head>
 <body>
 
     <div id="ui-container">
-        <div class="health-box">
-            <div id="playerHealth" style="width: 100%;"></div>
-        </div>
-        <div style="color: white; font-weight: bold; font-size: 24px;">VS</div>
-        <div class="health-box">
-            <div id="enemyHealth" style="width: 100%;"></div>
-        </div>
+        <div class="health-box"><div id="playerHealth" style="width: 100%;"></div></div>
+        <div id="timer">60</div>
+        <div class="health-box"><div id="enemyHealth" style="width: 100%;"></div></div>
+    </div>
+
+    <div id="score-board">
+        <div id="currentScoreDisplay">SCORE: 0</div>
+        <div id="highScoreDisplay">HIGH SCORE: 0</div>
+    </div>
+
+    <div id="gameOverScreen">
+        <div id="winnerText">PLAYER 1 WINS!</div>
+        <div id="finalScore">Your Score: 0</div>
+        <button id="restartBtn" onclick="location.reload()">PLAY AGAIN</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
     <div id="mobile-controls">
         <div class="control-group">
-            <div class="btn" id="leftBtn">Left</div>
-            <div class="btn" id="rightBtn">Right</div>
+            <div class="btn" id="leftBtn">LEFT</div>
+            <div class="btn" id="rightBtn">RIGHT</div>
         </div>
         <div class="control-group">
-            <div class="btn" id="jumpBtn">Jump</div>
-            <div class="btn" id="atkBtn">Attack</div>
+            <div class="btn" id="jumpBtn">JUMP</div>
+            <div class="btn" id="atkBtn">ATTACK</div>
         </div>
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        const gravity = 0.6;
+        const gravity = 0.8; // একটু ভারী ফিজিক্স
+        let isGameOver = false;
+        let currentScore = 0;
+        let animationFrame = 0; // অ্যানিমেশন টাইমিংয়ের জন্য
 
-        class Sprite {
-            constructor({position, velocity, color = 'blue', offset}) {
+        // লোকাল স্টোরেজ থেকে হাইস্কোর লোড করা
+        let highScore = localStorage.getItem('stickmanHighScore') || 0;
+        document.getElementById('highScoreDisplay').innerText = 'HIGH SCORE: ' + highScore;
+
+        // স্টিকম্যান স্প্রাইট ক্লাস (ছবি ছাড়া ড্রয়িং ভিত্তিক)
+        class Stickman {
+            constructor({position, velocity, color = 'blue', offset, facing = 'right'}) {
                 this.position = position;
                 this.velocity = velocity;
-                this.width = 40;
-                this.height = 120;
+                this.width = 40; // হিটবক্সের জন্য
+                this.height = 140; // একটু লম্বা স্টিকম্যান
                 this.color = color;
                 this.lastKey;
-                this.health = 100; // নতুন: হেলথ পয়েন্ট
+                this.health = 100;
+                this.dead = false;
+                this.facing = facing; // কোনদিকে তাকিয়ে আছে ('left' বা 'right')
                 
-                // নতুন: অ্যাটাক বক্স (Hitbox)
                 this.attackBox = {
                     position: { x: this.position.x, y: this.position.y },
                     offset: offset,
-                    width: 100,
-                    height: 50
+                    width: 110, height: 60
                 };
                 this.isAttacking = false;
             }
 
+            // ক্যানভাসে স্টিকম্যান আকার ফাংশন
             draw() {
+                if(this.dead) { ctx.globalAlpha = 0.3; } // মারা গেলে একটু ঝাপসা দেখাবে
+                
+                const x = this.position.x + this.width / 2; // স্টিকম্যানের কেন্দ্র
+                const y = this.position.y;
+                const h = this.height;
+                const f = (this.facing === 'right' ? 1 : -1); // দিক অনুযায়ী আঁকার মাল্টিপ্লায়ার
+                
+                ctx.lineWidth = 5; // স্টিকম্যানের লাইনের পুরুত্ব
+                ctx.strokeStyle = this.color;
                 ctx.fillStyle = this.color;
-                ctx.fillRect(this.position.x, this.position.y, this.width, this.height);
+                ctx.lineCap = 'round';
 
-                // অ্যাটাক করলে তলোয়ার বা ঘুষির মতো একটি হলুদ বক্স দেখাবে
-                if (this.isAttacking) {
-                    ctx.fillStyle = 'yellow';
-                    ctx.fillRect(this.attackBox.position.x, this.attackBox.position.y, this.attackBox.width, this.attackBox.height);
+                // ১. মাথা (Head)
+                ctx.beginPath();
+                ctx.arc(x, y + 25, 18, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // ২. শরীর (Torso/Spine)
+                ctx.beginPath();
+                ctx.moveTo(x, y + 43);
+                ctx.lineTo(x, y + 90);
+                ctx.stroke();
+
+                // অ্যানিমেশন লজিক: দৌড়ানো বা স্থির থাকা অনুযায়ী হাত-পাও নড়বে
+                const isRunning = this.velocity.x !== 0;
+                const animSpeed = 10;
+                // একটি সাইন ওয়েভ তৈরি করছি দৌড়ানোর ভঙ্গী বোঝার জন্য
+                const wave = isRunning ? Math.sin(animationFrame / animSpeed) : 0;
+                const limbAngle = wave * 30; // ৩০ ডিগ্রি পর্যন্ত নড়বে
+
+                // ৩. পা (Legs) - দৌড়ানোর ভঙ্গী
+                // বাম পা
+                ctx.beginPath();
+                ctx.moveTo(x, y + 90);
+                ctx.lineTo(x - f * 15 + limbAngle * f, y + h - 5 + Math.abs(limbAngle));
+                ctx.stroke();
+                // ডান পা
+                ctx.beginPath();
+                ctx.moveTo(x, y + 90);
+                ctx.lineTo(x + f * 15 - limbAngle * f, y + h - 5 + Math.abs(limbAngle));
+                ctx.stroke();
+
+                // ৪. হাত (Arms)
+                // পিছনের হাত (যদি অ্যাটাক না করে)
+                if (!this.isAttacking) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, y + 50);
+                    ctx.lineTo(x - f * 15 - limbAngle * f, y + 80);
+                    ctx.stroke();
                 }
+
+                // সামনের হাত বা অ্যাটাক করার হাত
+                if (this.isAttacking) {
+                    // ঘুষি মারার ভঙ্গী
+                    ctx.strokeStyle = '#f1c40f'; // ঘুষি মারার সময় হাতের রঙ সোনালী
+                    ctx.lineWidth = 8;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y + 50);
+                    ctx.lineTo(x + f * 70, y + 50); // সোজা লম্বা ঘুষি
+                    ctx.stroke();
+                    
+                    // ঘুষির মাথায় একটি ছোট বৃত্ত
+                    ctx.beginPath();
+                    ctx.arc(x + f * 75, y + 50, 10, 0, Math.PI * 2);
+                    ctx.fillStyle = '#f1c40f';
+                    ctx.fill();
+                    
+                    ctx.lineWidth = 5; // আগের পুরুত্বে ফেরত
+                    ctx.strokeStyle = this.color; // আগের রঙে ফেরত
+                } else {
+                    // সাধারণ অবস্থায় হাত
+                    ctx.beginPath();
+                    ctx.moveTo(x, y + 50);
+                    ctx.lineTo(x + f * 15 + limbAngle * f, y + 80);
+                    ctx.stroke();
+                }
+
+                ctx.globalAlpha = 1.0; // ঝাপসা ভাব রিসেট
             }
 
             update() {
+                if(this.dead) { this.draw(); return; } 
+                
+                // দিক নির্ধারণ (Velocity অনুযায়ী)
+                if (this.velocity.x > 0) this.facing = 'right';
+                else if (this.velocity.x < 0) this.facing = 'left';
+
                 this.draw();
                 
-                // অ্যাটাক বক্স সবসময় প্লেয়ারের সাথে সাথে থাকবে
-                this.attackBox.position.x = this.position.x + this.attackBox.offset.x;
-                this.attackBox.position.y = this.position.y + 20; // একটু নিচের দিকে অ্যাটাক হবে
+                // অ্যাটাক বক্স সবসময় স্টিকম্যানের মুখের সামনে থাকবে (Facing অনুযায়ী)
+                const f = (this.facing === 'right' ? 1 : -1);
+                if(this.facing === 'right') {
+                    this.attackBox.position.x = this.position.x;
+                } else {
+                    this.attackBox.position.x = this.position.x - (this.attackBox.width - this.width);
+                }
+                this.attackBox.position.y = this.position.y + 30;
 
                 this.position.x += this.velocity.x;
                 this.position.y += this.velocity.y;
 
+                // মাটি ও দেয়াল ডিটেকশন
                 if (this.position.y + this.height + this.velocity.y >= canvas.height - 100) {
                     this.velocity.y = 0;
                     this.position.y = canvas.height - 100 - this.height;
                 } else {
                     this.velocity.y += gravity;
                 }
+                
+                // স্ক্রিনের বাইরে যাওয়া বন্ধ করা
+                if(this.position.x < 0) this.position.x = 0;
+                if(this.position.x + this.width > canvas.width) this.position.x = canvas.width - this.width;
             }
 
-            // নতুন: অ্যাটাক ফাংশন
             attack() {
+                if(this.dead || isGameOver || this.velocity.y !== 0) return; // বাতাসে বা মারা গেলে অ্যাটাক হবে না
                 this.isAttacking = true;
-                setTimeout(() => {
-                    this.isAttacking = false;
-                }, 100); // ১০০ মিলি-সেকেন্ড পর অ্যাটাক শেষ হবে
+                setTimeout(() => { this.isAttacking = false; }, 150); // একটু দীর্ঘ ঘুষি
             }
         }
 
-        // প্লেয়ার (নীল)
-        const player = new Sprite({
-            position: { x: 50, y: 0 },
+        const player = new Stickman({
+            position: { x: canvas.width * 0.2, y: 0 },
             velocity: { x: 0, y: 0 },
-            offset: { x: 0, y: 0 } // ডানদিকে অ্যাটাক করবে
+            color: '#3498db', // সুন্দর নীল রঙ
+            facing: 'right'
         });
 
-        // শত্রু (লাল)
-        const enemy = new Sprite({
-            position: { x: canvas.width - 100, y: 0 },
+        const enemy = new Stickman({
+            position: { x: canvas.width * 0.7, y: 0 },
             velocity: { x: 0, y: 0 },
-            color: 'red',
-            offset: { x: -60, y: 0 } // বামদিকে অ্যাটাক করবে
+            color: '#e74c3c', // সুন্দর লাল রঙ
+            facing: 'left'
         });
 
-        const keys = {
-            left: { pressed: false },
-            right: { pressed: false }
-        };
+        const keys = { left: { pressed: false }, right: { pressed: false } };
 
-        // কলিশন ডিটেকশন (আঘাত লেগেছে কিনা যাচাই করার ফর্মুলা)
         function rectangularCollision({ rectangle1, rectangle2 }) {
             return (
                 rectangle1.attackBox.position.x + rectangle1.attackBox.width >= rectangle2.position.x &&
@@ -202,68 +251,108 @@
             )
         }
 
+        function determineWinner() {
+            isGameOver = true;
+            clearTimeout(timerId);
+            
+            document.getElementById('gameOverScreen').style.display = 'flex';
+            document.getElementById('finalScore').innerText = 'YOUR SCORE: ' + currentScore;
+            const resultText = document.getElementById('winnerText');
+
+            if (player.health === enemy.health) {
+                resultText.innerText = 'TIE GAME!';
+                resultText.style.color = '#fff';
+            } else if (player.health > enemy.health) {
+                resultText.innerText = 'PLAYER 1 WINS!';
+                resultText.style.color = '#3498db';
+            } else {
+                resultText.innerText = 'ENEMY WINS!';
+                resultText.style.color = '#e74c3c';
+            }
+
+            if (currentScore > parseInt(highScore)) {
+                localStorage.setItem('stickmanHighScore', currentScore);
+                document.getElementById('highScoreDisplay').innerText = 'NEW HIGH SCORE: ' + currentScore;
+            }
+        }
+
+        let timer = 60;
+        let timerId;
+        function decreaseTimer() {
+            if (timer > 0) {
+                timerId = setTimeout(decreaseTimer, 1000);
+                timer--;
+                document.getElementById('timer').innerText = timer;
+                if(timer <= 10) document.getElementById('timer').style.color = '#e74c3c'; // শেষ ১০ সেকেন্ডে লাল
+            }
+            if (timer === 0) {
+                determineWinner();
+            }
+        }
+        decreaseTimer();
+
         function animate() {
+            animationFrame++; // অ্যানিমেশন কাউন্টার বাড়ানো
             window.requestAnimationFrame(animate);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // মাটি আঁকা
-            ctx.fillStyle = '#2ecc71';
+            // ব্যাকগ্রাউন্ড ও মাটি (উন্নত গ্রাফিক্স)
+            ctx.fillStyle = '#7f8c8d'; // সিমেন্টের রাস্তা
             ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+            ctx.fillStyle = '#95a5a6'; // রাস্তার দাগ
+            ctx.fillRect(0, canvas.height - 105, canvas.width, 5);
 
             player.update();
             enemy.update();
 
-            // প্লেয়ার মুভমেন্ট
             player.velocity.x = 0;
             if (keys.left.pressed && player.lastKey === 'left') {
-                player.velocity.x = -5;
+                player.velocity.x = -7;
             } else if (keys.right.pressed && player.lastKey === 'right') {
-                player.velocity.x = 5;
+                player.velocity.x = 7;
             }
 
-            // কলিশন ডিটেকশন: প্লেয়ার যদি অ্যাটাক করে এবং তা শত্রুর গায়ে লাগে
+            // কলিশন লজিক (ঘুষি লাগা)
             if (rectangularCollision({ rectangle1: player, rectangle2: enemy }) && player.isAttacking) {
-                player.isAttacking = false; // একবার আঘাত লাগলে অ্যাটাক বন্ধ হবে
-                enemy.health -= 10; // শত্রুর হেলথ কমবে
-                document.querySelector('#enemyHealth').style.width = enemy.health + '%'; // UI আপডেট
+                player.isAttacking = false;
+                
+                // ড্যামেজ এবং ভিজ্যুয়াল এফেক্ট
+                enemy.health -= 10;
+                let healthPercent = Math.max(0, enemy.health);
+                document.querySelector('#enemyHealth').style.width = healthPercent + '%';
+                if(healthPercent < 30) document.querySelector('#enemyHealth').style.backgroundColor = '#f39c12'; // হেলথ কমলে কমলা
+                if(healthPercent <= 0) document.querySelector('#enemyHealth').style.backgroundColor = '#c0392b'; // মৃতপ্রায় হলে গাঢ় লাল
+                
+                // স্ক্রিন শেক এফেক্ট (ঐচ্ছিক, উন্নত অনুভূতির জন্য)
+                canvas.style.transform = `translate(${Math.random()*4-2}px, ${Math.random()*4-2}px)`;
+                setTimeout(()=> canvas.style.transform = 'translate(0,0)', 50);
+
+                currentScore += 20;
+                document.getElementById('currentScoreDisplay').innerText = 'SCORE: ' + currentScore;
+
+                if (enemy.health <= 0 && !isGameOver) {
+                    enemy.dead = true;
+                    determineWinner();
+                }
             }
         }
-
         animate();
 
-        // ডেস্কটপ কন্ট্রোল
+        // কিবোর্ড কন্ট্রোল
         window.addEventListener('keydown', (event) => {
+            if(isGameOver) return;
             switch (event.key) {
-                case 'd':
-                case 'ArrowRight':
-                    keys.right.pressed = true;
-                    player.lastKey = 'right';
-                    break;
-                case 'a':
-                case 'ArrowLeft':
-                    keys.left.pressed = true;
-                    player.lastKey = 'left';
-                    break;
-                case 'w':
-                case 'ArrowUp':
-                    if(player.velocity.y === 0) player.velocity.y = -15;
-                    break;
-                case ' ': // স্পেসবার দিয়ে অ্যাটাক
-                    player.attack();
-                    break;
+                case 'd': case 'ArrowRight': keys.right.pressed = true; player.lastKey = 'right'; break;
+                case 'a': case 'ArrowLeft': keys.left.pressed = true; player.lastKey = 'left'; break;
+                case 'w': case 'ArrowUp': if(player.velocity.y === 0) player.velocity.y = -20; break;
+                case ' ': player.attack(); break;
             }
         });
 
         window.addEventListener('keyup', (event) => {
             switch (event.key) {
-                case 'd':
-                case 'ArrowRight':
-                    keys.right.pressed = false;
-                    break;
-                case 'a':
-                case 'ArrowLeft':
-                    keys.left.pressed = false;
-                    break;
+                case 'd': case 'ArrowRight': keys.right.pressed = false; break;
+                case 'a': case 'ArrowLeft': keys.left.pressed = false; break;
             }
         });
 
@@ -272,14 +361,10 @@
             const btn = document.getElementById(id);
             btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                if(action === 'jump') {
-                    if(player.velocity.y === 0) player.velocity.y = -15;
-                } else if(action === 'attack') {
-                    player.attack(); // মোবাইলে অ্যাটাক বাটন
-                } else if(action === 'left' || action === 'right') {
-                    keys[action].pressed = true;
-                    player.lastKey = action;
-                }
+                if(isGameOver) return;
+                if(action === 'jump') { if(player.velocity.y === 0) player.velocity.y = -20; }
+                else if(action === 'attack') { player.attack(); }
+                else if(action === 'left' || action === 'right') { keys[action].pressed = true; player.lastKey = action; }
             });
             btn.addEventListener('touchend', (e) => {
                 e.preventDefault();
@@ -287,10 +372,8 @@
             });
         };
 
-        setupTouch('leftBtn', 'left');
-        setupTouch('rightBtn', 'right');
-        setupTouch('jumpBtn', 'jump');
-        setupTouch('atkBtn', 'attack'); // অ্যাটাক বাটন যুক্ত করা হলো
+        setupTouch('leftBtn', 'left'); setupTouch('rightBtn', 'right');
+        setupTouch('jumpBtn', 'jump'); setupTouch('atkBtn', 'attack');
 
     </script>
 </body>
