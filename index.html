@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stickman Fighter - Pro Edition</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #111; touch-action: none; font-family: 'Arial', sans-serif; user-select: none; }
+        canvas { display: block; margin: 0 auto; transition: background-color 1s ease; } /* পরিবেশ পরিবর্তনের ট্রানজিশন */
+        
+        /* UI ডিজাইন */
+        #ui-container { position: absolute; top: 0; width: 100%; padding: 15px 20px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        .health-box { width: 35%; height: 25px; background-color: #c0392b; border: 3px solid #fff; border-radius: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.5); }
+        #playerHealth, #enemyHealth { height: 100%; background-color: #2ecc71; transition: width 0.2s ease, background-color 0.3s ease; }
+        #enemyHealth { float: right; }
+        
+        #level-display { background-color: rgba(0,0,0,0.8); color: #f1c40f; padding: 10px 20px; font-size: 24px; font-weight: bold; border: 2px solid #f1c40f; border-radius: 10px; text-transform: uppercase; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+
+        #score-board { position: absolute; top: 65px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box; color: #fff; font-weight: bold; font-size: 16px; text-shadow: 1px 1px 3px #000; z-index: 10; }
+
+        /* পপআপ মেসেজ (Level Up / Game Over) */
+        #messageScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 100; backdrop-filter: blur(3px); }
+        #mainMessage { font-size: 45px; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; text-shadow: 0 0 10px currentColor; text-align: center; }
+        #subMessage { font-size: 20px; margin-bottom: 30px; color: #bdc3c7; text-align: center; }
+        #actionBtn { padding: 15px 40px; font-size: 20px; font-weight: bold; cursor: pointer; background-color: #e67e22; color: white; border: none; border-radius: 8px; box-shadow: 0 4px 0 #d35400; text-transform: uppercase; display: none; }
+        #actionBtn:active { box-shadow: 0 0 0 #d35400; transform: translateY(4px); }
+
+        /* মোবাইল বাটন */
+        #mobile-controls { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box; z-index: 10; }
+        .control-group { display: flex; gap: 15px; }
+        .btn { width: 60px; height: 60px; background-color: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 50%; color: #fff; font-weight: bold; font-size: 12px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: inset 0 0 10px rgba(255,255,255,0.1); }
+        .btn:active { background-color: rgba(255, 255, 255, 0.4); transform: scale(0.95); }
+        #atkBtn { background-color: rgba(231, 76, 60, 0.2); border-color: rgba(231, 76, 60, 0.6); }
+        #atkBtn:active { background-color: rgba(231, 76, 60, 0.6); }
+    </style>
+</head>
+<body>
+
+    <div id="ui-container">
+        <div class="health-box"><div id="playerHealth" style="width: 100%;"></div></div>
+        <div id="level-display">LVL 1</div>
+        <div class="health-box"><div id="enemyHealth" style="width: 100%;"></div></div>
+    </div>
+
+    <div id="score-board">
+        <div id="currentScoreDisplay">SCORE: 0</div>
+        <div id="highScoreDisplay">HIGH SCORE: 0</div>
+    </div>
+
+    <div id="messageScreen">
+        <div id="mainMessage">READY?</div>
+        <div id="subMessage">FIGHT!</div>
+        <button id="actionBtn" onclick="restartGame()">PLAY AGAIN</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="mobile-controls">
+        <div class="control-group">
+            <div class="btn" id="leftBtn">LEFT</div>
+            <div class="btn" id="rightBtn">RIGHT</div>
+        </div>
+        <div class="control-group">
+            <div class="btn" id="jumpBtn">JUMP</div>
+            <div class="btn" id="atkBtn">ATK</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // গেম স্টেট ও স্টোরেজ
+        const gravity = 0.8;
+        let isGameOver = false;
+        let isLevelTransition = false;
+        let animationFrame = 0;
+        
+        let currentLevel = parseInt(localStorage.getItem('stickmanLevel')) || 1;
+        let currentScore = 0;
+        let highScore = localStorage.getItem('stickmanHighScore') || 0;
+        
+        document.getElementById('level-display').innerText = 'LVL ' + currentLevel;
+        document.getElementById('highScoreDisplay').innerText = 'HIGH SCORE: ' + highScore;
+
+        // বিভিন্ন পরিবেশ (Environments)
+        const environments = [
+            { sky: '#ecf0f1', ground: '#95a5a6' }, // Level 1: Day
+            { sky: '#2c3e50', ground: '#34495e' }, // Level 2: Night
+            { sky: '#e67e22', ground: '#d35400' }, // Level 3: Sunset
+            { sky: '#27ae60', ground: '#2ecc71' }, // Level 4: Forest
+            { sky: '#8e44ad', ground: '#9b59b6' }, // Level 5: Mystic
+            { sky: '#c0392b', ground: '#7f8c8d' }  // Level 6+: Blood Moon
+        ];
+
+        function getEnv() {
+            return environments[Math.min(currentLevel - 1, environments.length - 1)];
+        }
+        canvas.style.backgroundColor = getEnv().sky;
+
+        class Stickman {
+            constructor({position, color, isAI = false}) {
+                this.position = position;
+                this.velocity = { x: 0, y: 0 };
+                this.width = 40;
+                this.height = 140;
+                this.color = color;
+                this.health = 100;
+                this.maxHealth = 100;
+                this.dead = false;
+                this.facing = isAI ? 'left' : 'right';
+                this.isAI = isAI;
+                
+                this.attackBox = { position: { x: 0, y: 0 }, width: 110, height: 60 };
+                this.isAttacking = false;
+                
+                // AI Settings
+                this.aiSpeed = 3 + (currentLevel * 0.5); // লেভেল বাড়লে স্পিড বাড়বে
+                this.aiAggro = 0.02 + (currentLevel * 0.01); // আক্রমণের সম্ভাবনা
+            }
+
+            draw() {
+                if(this.dead) ctx.globalAlpha = 0.3;
+                const x = this.position.x + this.width / 2;
+                const y = this.position.y;
+                const f = (this.facing === 'right' ? 1 : -1);
+                
+                ctx.lineWidth = 5; ctx.strokeStyle = this.color; ctx.lineCap = 'round';
+
+                ctx.beginPath(); ctx.arc(x, y + 25, 18, 0, Math.PI * 2); ctx.stroke(); // Head
+                ctx.beginPath(); ctx.moveTo(x, y + 43); ctx.lineTo(x, y + 90); ctx.stroke(); // Spine
+
+                const isRunning = this.velocity.x !== 0;
+                const wave = isRunning ? Math.sin(animationFrame / 8) : 0;
+                const limbAngle = wave * 35;
+
+                // Legs
+                ctx.beginPath(); ctx.moveTo(x, y + 90); ctx.lineTo(x - f * 15 + limbAngle * f, y + this.height); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(x, y + 90); ctx.lineTo(x + f * 15 - limbAngle * f, y + this.height); ctx.stroke();
+
+                // Arms & Attack
+                if (this.isAttacking) {
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = 8;
+                    ctx.beginPath(); ctx.moveTo(x, y + 50); ctx.lineTo(x + f * 75, y + 50); ctx.stroke();
+                    ctx.beginPath(); ctx.arc(x + f * 80, y + 50, 8, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+                    ctx.lineWidth = 5; ctx.strokeStyle = this.color;
+                } else {
+                    ctx.beginPath(); ctx.moveTo(x, y + 50); ctx.lineTo(x - f * 15 - limbAngle * f, y + 80); ctx.stroke(); // Back arm
+                    ctx.beginPath(); ctx.moveTo(x, y + 50); ctx.lineTo(x + f * 15 + limbAngle * f, y + 80); ctx.stroke(); // Front arm
+                }
+                ctx.globalAlpha = 1.0;
+            }
+
+            update(target) {
+                if(this.dead) { this.draw(); return; } 
+
+                // AI Logic (শত্রুর বুদ্ধিমত্তা)
+                if(this.isAI && !isLevelTransition && !isGameOver) {
+                    const distX = target.position.x - this.position.x;
+                    const absDist = Math.abs(distX);
+                    
+                    if (absDist > 90) { // প্লেয়ার দূরে থাকলে কাছে আসবে
+                        this.velocity.x = distX > 0 ? this.aiSpeed : -this.aiSpeed;
+                    } else { // প্লেয়ার কাছে থাকলে
+                        this.velocity.x = 0;
+                        if(Math.random() < this.aiAggro && !this.isAttacking && !target.dead) {
+                            this.attack();
+                        }
+                    }
+                    // প্লেয়ার লাফ দিলে বা মাঝেমধ্যে নিজেও লাফ দেবে
+                    if((target.velocity.y < -5 || Math.random() < 0.005) && this.velocity.y === 0) {
+                        this.velocity.y = -18;
+                    }
+                }
+
+                // Facing update
+                if (this.velocity.x > 0) this.facing = 'right';
+                else if (this.velocity.x < 0) this.facing = 'left';
+
+                this.draw();
+                
+                // Hitbox position
+                this.attackBox.position.x = this.facing === 'right' ? this.position.x : this.position.x - (this.attackBox.width - this.width);
+                this.attackBox.position.y = this.position.y + 30;
+
+                this.position.x += this.velocity.x;
+                this.position.y += this.velocity.y;
+
+                // Physics & Boundaries
+                if (this.position.y + this.height + this.velocity.y >= canvas.height - 100) {
+                    this.velocity.y = 0; this.position.y = canvas.height - 100 - this.height;
+                } else { this.velocity.y += gravity; }
+                
+                if(this.position.x < 0) this.position.x = 0;
+                if(this.position.x + this.width > canvas.width) this.position.x = canvas.width - this.width;
+            }
+
+            attack() {
+                if(this.dead || isLevelTransition || this.velocity.y !== 0) return;
+                this.isAttacking = true;
+                setTimeout(() => { this.isAttacking = false; }, 150);
+            }
+        }
+
+        let player, enemy;
+        function initEntities() {
+            player = new Stickman({ position: { x: canvas.width * 0.2, y: 0 }, color: '#3498db' });
+            enemy = new Stickman({ position: { x: canvas.width * 0.7, y: 0 }, color: '#e74c3c', isAI: true });
+            
+            // লেভেল অনুযায়ী শত্রুর শক্তি বাড়ানো
+            enemy.maxHealth = 100 + (currentLevel * 20); 
+            enemy.health = enemy.maxHealth;
+        }
+        initEntities();
+
+        const keys = { left: { pressed: false }, right: { pressed: false } };
+
+        function checkCollision(r1, r2) {
+            return (
+                r1.attackBox.position.x + r1.attackBox.width >= r2.position.x &&
+                r1.attackBox.position.x <= r2.position.x + r2.width &&
+                r1.attackBox.position.y + r1.attackBox.height >= r2.position.y &&
+                r1.attackBox.position.y <= r2.position.y + r2.height
+            )
+        }
+
+        function showMessage(main, sub, showBtn = false) {
+            const screen = document.getElementById('messageScreen');
+            document.getElementById('mainMessage').innerText = main;
+            document.getElementById('subMessage').innerText = sub;
+            document.getElementById('actionBtn').style.display = showBtn ? 'block' : 'none';
+            screen.style.display = 'flex';
+        }
+
+        function hideMessage() { document.getElementById('messageScreen').style.display = 'none'; }
+
+        // শুরুতে একটি ছোট মেসেজ
+        showMessage(`LEVEL ${currentLevel}`, 'FIGHT!');
+        setTimeout(hideMessage, 1500);
+
+        function handleLevelUp() {
+            isLevelTransition = true;
+            currentLevel++;
+            localStorage.setItem('stickmanLevel', currentLevel);
+            
+            showMessage('LEVEL CLEARED!', 'PREPARE FOR NEXT BATTLE...');
+            
+            setTimeout(() => {
+                canvas.style.backgroundColor = getEnv().sky;
+                document.getElementById('level-display').innerText = 'LVL ' + currentLevel;
+                document.querySelector('#playerHealth').style.width = '100%';
+                document.querySelector('#enemyHealth').style.width = '100%';
+                document.querySelector('#playerHealth').style.backgroundColor = '#2ecc71';
+                document.querySelector('#enemyHealth').style.backgroundColor = '#2ecc71';
+                
+                initEntities();
+                hideMessage();
+                isLevelTransition = false;
+            }, 2000);
+        }
+
+        function handleGameOver() {
+            isGameOver = true;
+            if (currentScore > parseInt(highScore)) {
+                localStorage.setItem('stickmanHighScore', currentScore);
+            }
+            // লেভেল রিসেট করে ১ এ নিয়ে আসা (যেহেতু গেম ওভার)
+            localStorage.setItem('stickmanLevel', 1);
+            
+            document.getElementById('mainMessage').style.color = '#e74c3c';
+            showMessage('GAME OVER', `FINAL SCORE: ${currentScore}`, true);
+        }
+
+        function restartGame() { location.reload(); }
+
+        function animate() {
+            animationFrame++;
+            window.requestAnimationFrame(animate);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // গ্রাউন্ড রেন্ডারিং
+            ctx.fillStyle = getEnv().ground;
+            ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+
+            player.update(enemy);
+            enemy.update(player);
+
+            // প্লেয়ার মুভমেন্ট
+            player.velocity.x = 0;
+            if(!player.dead && !isLevelTransition && !isGameOver) {
+                if (keys.left.pressed) player.velocity.x = -6;
+                else if (keys.right.pressed) player.velocity.x = 6;
+            }
+
+            // প্লেয়ারের আক্রমণ
+            if (checkCollision(player, enemy) && player.isAttacking && !enemy.dead) {
+                player.isAttacking = false;
+                enemy.health -= 15;
+                updateHealthUI('#enemyHealth', enemy.health, enemy.maxHealth);
+                screenShake();
+                currentScore += 10;
+                
+                if (enemy.health <= 0) {
+                    enemy.dead = true;
+                    currentScore += 100; // লেভেল ক্লিয়ার বোনাস
+                    handleLevelUp();
+                }
+                document.getElementById('currentScoreDisplay').innerText = 'SCORE: ' + currentScore;
+            }
+
+            // শত্রুর আক্রমণ
+            if (checkCollision(enemy, player) && enemy.isAttacking && !player.dead) {
+                enemy.isAttacking = false;
+                player.health -= 10;
+                updateHealthUI('#playerHealth', player.health, player.maxHealth);
+                screenShake();
+                
+                if (player.health <= 0) {
+                    player.dead = true;
+                    handleGameOver();
+                }
+            }
+        }
+
+        function updateHealthUI(selector, current, max) {
+            const percent = Math.max(0, (current / max) * 100);
+            const el = document.querySelector(selector);
+            el.style.width = percent + '%';
+            if(percent < 30) el.style.backgroundColor = '#f39c12';
+            if(percent <= 10) el.style.backgroundColor = '#c0392b';
+        }
+
+        function screenShake() {
+            canvas.style.transform = `translate(${Math.random()*6-3}px, ${Math.random()*6-3}px)`;
+            setTimeout(()=> canvas.style.transform = 'translate(0,0)', 50);
+        }
+
+        animate();
+
+        // ডেস্কটপ কন্ট্রোল
+        window.addEventListener('keydown', (e) => {
+            if(isLevelTransition || isGameOver) return;
+            switch (e.key) {
+                case 'd': case 'ArrowRight': keys.right.pressed = true; break;
+                case 'a': case 'ArrowLeft': keys.left.pressed = true; break;
+                case 'w': case 'ArrowUp': if(player.velocity.y === 0) player.velocity.y = -18; break;
+                case ' ': player.attack(); break;
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            switch (e.key) {
+                case 'd': case 'ArrowRight': keys.right.pressed = false; break;
+                case 'a': case 'ArrowLeft': keys.left.pressed = false; break;
+            }
+        });
+
+        // মোবাইল টাচ কন্ট্রোল
+        const setupTouch = (id, action) => {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if(isLevelTransition || isGameOver) return;
+                if(action === 'jump') { if(player.velocity.y === 0) player.velocity.y = -18; }
+                else if(action === 'attack') { player.attack(); }
+                else if(action === 'left' || action === 'right') { keys[action].pressed = true; }
+            });
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                if(action === 'left' || action === 'right') keys[action].pressed = false;
+            });
+        };
+
+        setupTouch('leftBtn', 'left'); setupTouch('rightBtn', 'right');
+        setupTouch('jumpBtn', 'jump'); setupTouch('atkBtn', 'attack');
+
+    </script>
+</body>
+</html>
