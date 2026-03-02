@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stickman Fighter - Advanced Combat</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #111; touch-action: none; font-family: 'Arial', sans-serif; user-select: none; }
+        canvas { display: block; margin: 0 auto; transition: background-color 1.5s ease; }
+        
+        /* UI ডিজাইন */
+        #ui-container { position: absolute; top: 0; width: 100%; padding: 15px 20px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        .health-box { width: 35%; height: 25px; background-color: #c0392b; border: 3px solid #fff; border-radius: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.5); position: relative; }
+        #playerHealth, #enemyHealth { height: 100%; background-color: #2ecc71; transition: width 0.2s ease, background-color 0.3s ease; }
+        #enemyHealth { float: right; }
+        .health-text { position: absolute; width: 100%; text-align: center; color: white; font-weight: bold; top: 3px; font-size: 14px; text-shadow: 1px 1px 2px #000; }
+        
+        #level-display { background-color: rgba(0,0,0,0.8); color: #f1c40f; padding: 10px 20px; font-size: 24px; font-weight: bold; border: 2px solid #f1c40f; border-radius: 10px; text-transform: uppercase; box-shadow: 0 0 10px rgba(241, 196, 15, 0.5); }
+
+        #score-board { position: absolute; top: 65px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box; color: #fff; font-weight: bold; font-size: 16px; text-shadow: 1px 1px 3px #000; z-index: 10; }
+
+        /* পপআপ মেসেজ */
+        #messageScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.75); display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 100; backdrop-filter: blur(4px); }
+        #mainMessage { font-size: 45px; font-weight: bold; margin-bottom: 15px; text-align: center; text-shadow: 0 0 10px currentColor; }
+        #subMessage { font-size: 20px; margin-bottom: 30px; color: #bdc3c7; text-align: center; }
+        #actionBtn { padding: 15px 40px; font-size: 20px; font-weight: bold; cursor: pointer; background-color: #27ae60; color: white; border: none; border-radius: 8px; box-shadow: 0 4px 0 #2ecc71; text-transform: uppercase; display: none; transition: transform 0.1s; }
+        #actionBtn:active { transform: translateY(4px); box-shadow: 0 0 0 #2ecc71; }
+
+        /* মোবাইল বাটন */
+        #mobile-controls { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-between; padding: 0 15px; box-sizing: border-box; z-index: 10; }
+        .control-group { display: flex; gap: 10px; }
+        .btn { width: 55px; height: 55px; background-color: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 50%; color: #fff; font-weight: bold; font-size: 11px; display: flex; align-items: center; justify-content: center; touch-action: manipulation; box-shadow: inset 0 0 10px rgba(255,255,255,0.1); }
+        .btn:active { background-color: rgba(255, 255, 255, 0.4); transform: scale(0.95); }
+        .atk-btn { background-color: rgba(231, 76, 60, 0.2); border-color: rgba(231, 76, 60, 0.6); }
+        .atk-btn:active { background-color: rgba(231, 76, 60, 0.6); }
+        .kick-btn { background-color: rgba(241, 196, 15, 0.2); border-color: rgba(241, 196, 15, 0.6); }
+        .kick-btn:active { background-color: rgba(241, 196, 15, 0.6); }
+    </style>
+</head>
+<body>
+
+    <div id="ui-container">
+        <div class="health-box">
+            <div id="playerHealth" style="width: 100%;"></div>
+            <div class="health-text" id="pHealthText">100/100</div>
+        </div>
+        <div id="level-display">LVL 1</div>
+        <div class="health-box">
+            <div id="enemyHealth" style="width: 100%;"></div>
+            <div class="health-text" id="eHealthText">100/100</div>
+        </div>
+    </div>
+
+    <div id="score-board">
+        <div id="currentScoreDisplay">SCORE: 0</div>
+        <div id="highScoreDisplay">HIGH SCORE: 0</div>
+    </div>
+
+    <div id="messageScreen">
+        <div id="mainMessage" style="color:#3498db;">STICKMAN FIGHTER</div>
+        <div id="subMessage">USE PUNCH & KICK TO DEFEAT ENEMIES</div>
+        <button id="actionBtn" onclick="handleBtnClick()">START GAME</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="mobile-controls">
+        <div class="control-group">
+            <div class="btn" id="leftBtn">LEFT</div>
+            <div class="btn" id="rightBtn">RIGHT</div>
+        </div>
+        <div class="control-group">
+            <div class="btn kick-btn" id="kickBtn">KICK</div>
+            <div class="btn atk-btn" id="atkBtn">PUNCH</div>
+            <div class="btn" id="jumpBtn">JUMP</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const gravity = 0.7; // গ্র্যাভিটি একটু কমানো হয়েছে যাতে লাফানো সহজ হয়
+        let isGameOver = false;
+        let isGamePaused = true; // শুরুতে গেম পজ থাকবে
+        let animationFrame = 0;
+        
+        let currentLevel = parseInt(localStorage.getItem('stickmanLevel')) || 1;
+        let currentScore = 0;
+        let highScore = localStorage.getItem('stickmanHighScore') || 0;
+        
+        document.getElementById('level-display').innerText = 'LVL ' + currentLevel;
+        document.getElementById('highScoreDisplay').innerText = 'HIGH SCORE: ' + highScore;
+
+        // Environments
+        const environments = [
+            { sky: '#ecf0f1', ground: '#95a5a6' },
+            { sky: '#34495e', ground: '#2c3e50' },
+            { sky: '#f39c12', ground: '#d35400' },
+            { sky: '#27ae60', ground: '#16a085' },
+            { sky: '#8e44ad', ground: '#2c3e50' },
+            { sky: '#c0392b', ground: '#111' }
+        ];
+
+        function getEnv() { return environments[Math.min(currentLevel - 1, environments.length - 1)]; }
+        canvas.style.backgroundColor = getEnv().sky;
+
+        class Stickman {
+            constructor({position, color, isAI = false}) {
+                this.position = position;
+                this.velocity = { x: 0, y: 0 };
+                this.width = 40;
+                this.height = 140;
+                this.color = color;
+                
+                // হেলথ ব্যালেন্স
+                this.maxHealth = isAI ? 100 + (currentLevel * 15) : 200; // প্লেয়ারের হেলথ বেশি
+                this.health = this.maxHealth;
+                this.dead = false;
+                this.facing = isAI ? 'left' : 'right';
+                this.isAI = isAI;
+                
+                this.attackBox = { position: { x: 0, y: 0 }, width: 100, height: 60 };
+                this.isPunching = false;
+                this.isKicking = false;
+                
+                // AI Settings (একটু ধীরগতির করা হয়েছে)
+                this.aiSpeed = 2.5 + (currentLevel * 0.3); 
+                this.aiAggro = 0.015 + (currentLevel * 0.005); 
+            }
+
+            draw() {
+                if(this.dead) ctx.globalAlpha = 0.3;
+                const x = this.position.x + this.width / 2;
+                const y = this.position.y;
+                const f = (this.facing === 'right' ? 1 : -1);
+                
+                ctx.lineWidth = 5; ctx.strokeStyle = this.color; ctx.lineCap = 'round';
+
+                ctx.beginPath(); ctx.arc(x, y + 25, 18, 0, Math.PI * 2); ctx.stroke(); // মাথা
+                ctx.beginPath(); ctx.moveTo(x, y + 43); ctx.lineTo(x, y + 90); ctx.stroke(); // শরীর
+
+                const isRunning = this.velocity.x !== 0;
+                const wave = isRunning ? Math.sin(animationFrame / 10) : 0;
+                const limbAngle = wave * 30;
+
+                // পা (Legs & Kick)
+                if (this.isKicking) {
+                    // কিক করার অ্যানিমেশন (সামনের পা সোজা)
+                    ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 8;
+                    ctx.beginPath(); ctx.moveTo(x, y + 90); ctx.lineTo(x + f * 70, y + 90); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(x, y + 90); ctx.lineTo(x - f * 15, y + this.height); ctx.stroke(); // পেছনের পা
+                    ctx.lineWidth = 5; ctx.strokeStyle = this.color;
+                } else {
+                    ctx.beginPath(); ctx.moveTo(x, y + 90); ctx.lineTo(x - f * 15 + limbAngle * f, y + this.height); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(x, y + 90); ctx.lineTo(x + f * 15 - limbAngle * f, y + this.height); ctx.stroke();
+                }
+
+                // হাত (Arms & Punch)
+                if (this.isPunching) {
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = 8;
+                    ctx.beginPath(); ctx.moveTo(x, y + 50); ctx.lineTo(x + f * 65, y + 50); ctx.stroke();
+                    ctx.beginPath(); ctx.arc(x + f * 70, y + 50, 8, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+                    ctx.lineWidth = 5; ctx.strokeStyle = this.color;
+                } else {
+                    ctx.beginPath(); ctx.moveTo(x, y + 50); ctx.lineTo(x - f * 15 - limbAngle * f, y + 80); ctx.stroke(); 
+                    ctx.beginPath(); ctx.moveTo(x, y + 50); ctx.lineTo(x + f * 15 + limbAngle * f, y + 80); ctx.stroke(); 
+                }
+                ctx.globalAlpha = 1.0;
+            }
+
+            update(target) {
+                if(this.dead) { this.draw(); return; } 
+
+                // AI Logic
+                if(this.isAI && !isGamePaused) {
+                    const distX = target.position.x - this.position.x;
+                    const absDist = Math.abs(distX);
+                    
+                    if (absDist > 80) { 
+                        this.velocity.x = distX > 0 ? this.aiSpeed : -this.aiSpeed;
+                    } else { 
+                        this.velocity.x = 0;
+                        if(Math.random() < this.aiAggro && !this.isPunching && !this.isKicking && !target.dead) {
+                            Math.random() > 0.5 ? this.punch() : this.kick(); // AI রেন্ডমলি পাঞ্চ বা কিক করবে
+                        }
+                    }
+                    if((target.velocity.y < -5 || Math.random() < 0.003) && this.velocity.y === 0) {
+                        this.velocity.y = -16; // AI জাম্প
+                    }
+                }
+
+                if (this.velocity.x > 0) this.facing = 'right';
+                else if (this.velocity.x < 0) this.facing = 'left';
+
+                this.draw();
+                
+                // Hitbox update
+                this.attackBox.position.x = this.facing === 'right' ? this.position.x : this.position.x - (this.attackBox.width - this.width);
+                this.attackBox.position.y = this.isKicking ? this.position.y + 70 : this.position.y + 30; // কিক করলে হিটবক্স নিচে নামবে
+
+                this.position.x += this.velocity.x;
+                this.position.y += this.velocity.y;
+
+                if (this.position.y + this.height + this.velocity.y >= canvas.height - 100) {
+                    this.velocity.y = 0; this.position.y = canvas.height - 100 - this.height;
+                } else { this.velocity.y += gravity; }
+                
+                if(this.position.x < 0) this.position.x = 0;
+                if(this.position.x + this.width > canvas.width) this.position.x = canvas.width - this.width;
+            }
+
+            punch() {
+                if(this.dead || isGamePaused) return;
+                this.isPunching = true;
+                setTimeout(() => { this.isPunching = false; }, 150);
+            }
+
+            kick() {
+                if(this.dead || isGamePaused) return;
+                this.isKicking = true;
+                setTimeout(() => { this.isKicking = false; }, 250); // কিক একটু স্লো কিন্তু পাওয়ারফুল
+            }
+        }
+
+        let player, enemy;
+        function initEntities() {
+            player = new Stickman({ position: { x: canvas.width * 0.2, y: 0 }, color: '#3498db' });
+            enemy = new Stickman({ position: { x: canvas.width * 0.7, y: 0 }, color: '#e74c3c', isAI: true });
+            updateHealthUI('#playerHealth', player.health, player.maxHealth, '#pHealthText');
+            updateHealthUI('#enemyHealth', enemy.health, enemy.maxHealth, '#eHealthText');
+        }
+        initEntities();
+
+        const keys = { left: { pressed: false }, right: { pressed: false } };
+
+        function checkCollision(r1, r2) {
+            return (
+                r1.attackBox.position.x + r1.attackBox.width >= r2.position.x &&
+                r1.attackBox.position.x <= r2.position.x + r2.width &&
+                r1.attackBox.position.y + r1.attackBox.height >= r2.position.y &&
+                r1.attackBox.position.y <= r2.position.y + r2.height
+            )
+        }
+
+        function showMessage(main, sub, btnText, color = '#fff') {
+            document.getElementById('mainMessage').innerText = main;
+            document.getElementById('mainMessage').style.color = color;
+            document.getElementById('subMessage').innerText = sub;
+            const btn = document.getElementById('actionBtn');
+            btn.innerText = btnText;
+            btn.style.display = 'block';
+            document.getElementById('messageScreen').style.display = 'flex';
+        }
+
+        // শুরুতে গেম স্টার্ট স্ক্রিন দেখানো
+        showMessage('STICKMAN FIGHTER', `CURRENT LEVEL: ${currentLevel}`, 'START BATTLE', '#3498db');
+
+        function handleBtnClick() {
+            const btnText = document.getElementById('actionBtn').innerText;
+            if (btnText === 'PLAY AGAIN') {
+                location.reload();
+            } else {
+                // স্টার্ট বা নেক্সট লেভেল শুরু
+                document.getElementById('messageScreen').style.display = 'none';
+                isGamePaused = false;
+            }
+        }
+
+        function handleLevelUp() {
+            isGamePaused = true;
+            currentLevel++;
+            localStorage.setItem('stickmanLevel', currentLevel);
+            
+            setTimeout(() => {
+                showMessage('LEVEL CLEARED!', 'YOU SURVIVED. READY FOR MORE?', 'NEXT LEVEL', '#2ecc71');
+                
+                // নতুন লেভেলের জন্য পরিবেশ ও এন্ট্রি রিসেট
+                canvas.style.backgroundColor = getEnv().sky;
+                document.getElementById('level-display').innerText = 'LVL ' + currentLevel;
+                initEntities();
+            }, 1000);
+        }
+
+        function handleGameOver() {
+            isGameOver = true;
+            isGamePaused = true;
+            if (currentScore > parseInt(highScore)) localStorage.setItem('stickmanHighScore', currentScore);
+            localStorage.setItem('stickmanLevel', 1); // গেম ওভার হলে লেভেল ১ এ ফেরত যাবে
+            
+            setTimeout(() => {
+                showMessage('GAME OVER', `FINAL SCORE: ${currentScore}`, 'PLAY AGAIN', '#e74c3c');
+            }, 1000);
+        }
+
+        function animate() {
+            animationFrame++;
+            window.requestAnimationFrame(animate);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // গ্রাউন্ড
+            ctx.fillStyle = getEnv().ground;
+            ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+
+            player.update(enemy);
+            enemy.update(player);
+
+            if(isGamePaused) return; // পজ থাকলে ফাইটিং এবং মুভমেন্ট লজিক কাজ করবে না
+
+            // Auto Health Regen (প্রতি সেকেন্ডে প্লেয়ারের ২ হেলথ বাড়বে)
+            if (animationFrame % 60 === 0 && player.health < player.maxHealth && !player.dead) {
+                player.health = Math.min(player.maxHealth, player.health + 2);
+                updateHealthUI('#playerHealth', player.health, player.maxHealth, '#pHealthText');
+            }
+
+            // প্লেয়ার মুভমেন্ট
+            player.velocity.x = 0;
+            if(!player.dead) {
+                if (keys.left.pressed) player.velocity.x = -6;
+                else if (keys.right.pressed) player.velocity.x = 6;
+            }
+
+            // প্লেয়ারের আক্রমণ (পাঞ্চ বা কিক)
+            if (checkCollision(player, enemy) && (player.isPunching || player.isKicking) && !enemy.dead) {
+                let damage = player.isPunching ? 10 : 20; // কিক করলে ড্যামেজ দ্বিগুণ
+                
+                if(player.isPunching) player.isPunching = false;
+                if(player.isKicking) player.isKicking = false;
+                
+                enemy.health -= damage;
+                updateHealthUI('#enemyHealth', enemy.health, enemy.maxHealth, '#eHealthText');
+                screenShake();
+                currentScore += damage;
+                
+                if (enemy.health <= 0) {
+                    enemy.dead = true;
+                    currentScore += 100;
+                    handleLevelUp();
+                }
+                document.getElementById('currentScoreDisplay').innerText = 'SCORE: ' + currentScore;
+            }
+
+            // শত্রুর আক্রমণ
+            if (checkCollision(enemy, player) && (enemy.isPunching || enemy.isKicking) && !player.dead) {
+                let eDamage = enemy.isPunching ? 5 : 10; // শত্রুর ড্যামেজ কমিয়ে দেওয়া হয়েছে
+                
+                if(enemy.isPunching) enemy.isPunching = false;
+                if(enemy.isKicking) enemy.isKicking = false;
+                
+                player.health -= eDamage;
+                updateHealthUI('#playerHealth', player.health, player.maxHealth, '#pHealthText');
+                screenShake();
+                
+                if (player.health <= 0) {
+                    player.dead = true;
+                    handleGameOver();
+                }
+            }
+        }
+
+        function updateHealthUI(selector, current, max, textSelector) {
+            const percent = Math.max(0, (current / max) * 100);
+            const el = document.querySelector(selector);
+            el.style.width = percent + '%';
+            if(percent < 30) el.style.backgroundColor = '#f39c12';
+            else if(percent <= 15) el.style.backgroundColor = '#c0392b';
+            else el.style.backgroundColor = '#2ecc71';
+            
+            document.querySelector(textSelector).innerText = `${Math.max(0, current)}/${max}`;
+        }
+
+        function screenShake() {
+            canvas.style.transform = `translate(${Math.random()*6-3}px, ${Math.random()*6-3}px)`;
+            setTimeout(()=> canvas.style.transform = 'translate(0,0)', 50);
+        }
+
+        animate();
+
+        // ডেস্কটপ কন্ট্রোল
+        window.addEventListener('keydown', (e) => {
+            if(isGamePaused) return;
+            switch (e.key) {
+                case 'd': case 'ArrowRight': keys.right.pressed = true; break;
+                case 'a': case 'ArrowLeft': keys.left.pressed = true; break;
+                case 'w': case 'ArrowUp': if(player.velocity.y === 0) player.velocity.y = -18; break;
+                case ' ': player.punch(); break; // স্পেসবারে পাঞ্চ
+                case 'k': player.kick(); break;  // 'k' বাটনে কিক
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            switch (e.key) {
+                case 'd': case 'ArrowRight': keys.right.pressed = false; break;
+                case 'a': case 'ArrowLeft': keys.left.pressed = false; break;
+            }
+        });
+
+        // মোবাইল টাচ কন্ট্রোল
+        const setupTouch = (id, action) => {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if(isGamePaused) return;
+                if(action === 'jump') { if(player.velocity.y === 0) player.velocity.y = -18; }
+                else if(action === 'punch') { player.punch(); }
+                else if(action === 'kick') { player.kick(); }
+                else if(action === 'left' || action === 'right') { keys[action].pressed = true; }
+            });
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                if(action === 'left' || action === 'right') keys[action].pressed = false;
+            });
+        };
+
+        setupTouch('leftBtn', 'left'); setupTouch('rightBtn', 'right');
+        setupTouch('jumpBtn', 'jump'); setupTouch('atkBtn', 'punch'); setupTouch('kickBtn', 'kick');
+
+    </script>
+</body>
+</html>
