@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stickman Fighter</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; /* স্ক্রলবার বন্ধ রাখা */
+            background-color: #333;
+            touch-action: none; /* মোবাইলে ডিফল্ট সোয়াইপ বন্ধ রাখা */
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+            background-color: #87CEEB; /* আকাশের রঙ */
+            margin: 0 auto;
+        }
+        
+        /* মোবাইল কন্ট্রোল বাটনের ডিজাইন */
+        #mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+        .control-group {
+            display: flex;
+            gap: 15px;
+        }
+        .btn {
+            width: 60px;
+            height: 60px;
+            background-color: rgba(255, 255, 255, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            color: #000;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            cursor: pointer;
+        }
+        .btn:active {
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="mobile-controls">
+        <div class="control-group">
+            <div class="btn" id="leftBtn">Left</div>
+            <div class="btn" id="rightBtn">Right</div>
+        </div>
+        <div class="control-group">
+            <div class="btn" id="jumpBtn">Jump</div>
+            <div class="btn" id="atkBtn">Attack</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // ক্যানভাস সাইজ স্ক্রিনের মাপে সেট করা
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const gravity = 0.6; // মধ্যাকর্ষণ শক্তি
+
+        // প্লেয়ারের ব্লুপ্রিন্ট (Class)
+        class Sprite {
+            constructor({position, velocity, color = 'blue'}) {
+                this.position = position;
+                this.velocity = velocity;
+                this.width = 40;
+                this.height = 120; // আপাতত স্টিকম্যানের বদলে একটি ব্লক ব্যবহার করছি
+                this.color = color;
+                this.lastKey;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.position.x, this.position.y, this.width, this.height);
+            }
+
+            update() {
+                this.draw();
+                
+                // মুভমেন্ট ক্যালকুলেশন
+                this.position.x += this.velocity.x;
+                this.position.y += this.velocity.y;
+
+                // মাটি (Ground) ডিটেকশন (স্ক্রিনের নিচ থেকে ১০০ পিক্সেল উপরে মাটি)
+                if (this.position.y + this.height + this.velocity.y >= canvas.height - 100) {
+                    this.velocity.y = 0;
+                    this.position.y = canvas.height - 100 - this.height;
+                } else {
+                    this.velocity.y += gravity; // বাতাসে থাকলে নিচে পড়বে
+                }
+            }
+        }
+
+        // প্লেয়ার তৈরি করা
+        const player = new Sprite({
+            position: { x: 50, y: 0 },
+            velocity: { x: 0, y: 0 }
+        });
+
+        // কি-বোর্ড বা বাটনের স্টেট
+        const keys = {
+            left: { pressed: false },
+            right: { pressed: false }
+        };
+
+        // অ্যানিমেশন লুপ (প্রতি সেকেন্ডে ৬০ বার রান হবে)
+        function animate() {
+            window.requestAnimationFrame(animate);
+            
+            // ক্যানভাস ক্লিয়ার করে নতুন ফ্রেম আঁকা
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // মাটি আঁকা
+            ctx.fillStyle = '#2ecc71';
+            ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+
+            player.update();
+
+            // মুভমেন্ট লজিক
+            player.velocity.x = 0;
+            if (keys.left.pressed && player.lastKey === 'left') {
+                player.velocity.x = -5; // বামে যাওয়া
+            } else if (keys.right.pressed && player.lastKey === 'right') {
+                player.velocity.x = 5; // ডানে যাওয়া
+            }
+        }
+
+        animate();
+
+        // ডেস্কটপের জন্য কি-বোর্ড কন্ট্রোল
+        window.addEventListener('keydown', (event) => {
+            switch (event.key) {
+                case 'd':
+                case 'ArrowRight':
+                    keys.right.pressed = true;
+                    player.lastKey = 'right';
+                    break;
+                case 'a':
+                case 'ArrowLeft':
+                    keys.left.pressed = true;
+                    player.lastKey = 'left';
+                    break;
+                case 'w':
+                case 'ArrowUp':
+                    if(player.velocity.y === 0) player.velocity.y = -15; // জাম্প করা
+                    break;
+            }
+        });
+
+        window.addEventListener('keyup', (event) => {
+            switch (event.key) {
+                case 'd':
+                case 'ArrowRight':
+                    keys.right.pressed = false;
+                    break;
+                case 'a':
+                case 'ArrowLeft':
+                    keys.left.pressed = false;
+                    break;
+            }
+        });
+
+        // মোবাইলের জন্য টাচ কন্ট্রোল
+        const setupTouch = (id, action) => {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if(action === 'jump') {
+                    if(player.velocity.y === 0) player.velocity.y = -15;
+                } else if(action === 'left' || action === 'right') {
+                    keys[action].pressed = true;
+                    player.lastKey = action;
+                }
+            });
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                if(action === 'left' || action === 'right') keys[action].pressed = false;
+            });
+        };
+
+        setupTouch('leftBtn', 'left');
+        setupTouch('rightBtn', 'right');
+        setupTouch('jumpBtn', 'jump');
+
+    </script>
+</body>
+</html>
